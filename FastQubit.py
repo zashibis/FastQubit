@@ -49,6 +49,11 @@ class Qubit:
             self.rotateY(defect)
         else:
             self.rotateY(-defect)
+        if(random.randint(0,1) == 0):
+            self.P_pi(4)
+        else:
+            self.P_pi(-4)
+
 
     def show(self):
         plot_bloch_vector(self.state, title=self.name, figsize=(5,6), coord_type='Cartesian')
@@ -60,6 +65,10 @@ class Qubit:
             self.rotateY(self.defect)
         else:
             self.rotateY(-self.defect)
+        if(random.randint(0,1) == 0):
+            self.P_pi(4)
+        else:
+            self.P_pi(-4)
 
     def measureX(self):
         if (self.state[0] > 0):
@@ -88,11 +97,17 @@ class Qubit:
             raise Exception('Unknown value')
 
     def getTheta(self):
-        #TODO not like in Bloch Sphere
-        return np.arctan2(self.state[2], np.hypot(self.state[0], self.state[1]))
+        theta = np.arctan2(self.state[2], np.hypot(self.state[0], self.state[1]))
+        # Conversion to Bloch Sphere coordinates
+        theta = pi/2 - theta
+        return theta
 
     def getPhi(self):
-        return np.arctan2(self.state[1], self.state[0])
+        phi = np.arctan2(self.state[1], self.state[0])
+        # Conversion to Bloch Sphere coordinates
+        if phi<0:
+            phi = 2*pi + phi
+        return phi
 
 
 ###########################################################
@@ -132,6 +147,18 @@ class Qubit:
         else:
             self.state = np.dot(Zdg_rotation_matrix[int(math.log2(-divider))], self.state)
 
+    def rotateX_pi(self, divider):
+        if divider > 0:
+            self.state = np.dot(X_rotation_matrix[int(math.log2(divider))], self.state)
+        else:
+            self.state = np.dot(Xdg_rotation_matrix[int(math.log2(-divider))], self.state)
+
+    def rotateY_pi(self, divider):
+        if divider > 0:
+            self.state = np.dot(Y_rotation_matrix[int(math.log2(divider))], self.state)
+        else:
+            self.state = np.dot(Ydg_rotation_matrix[int(math.log2(-divider))], self.state)
+
     def T(self):
         self.state = np.dot(Z_rotation_matrix[2], self.state)
         #self.rotateZ(pi/4)
@@ -146,10 +173,10 @@ class Register:
     size = 0
     qubits = []
 
-    def __init__(self, name, size):
+    def __init__(self, name, size, defect=0.000000001):
         self.name = name
         self.size = size
-        self.qubits = [ Qubit(name+str(i)) for i in range(size) ]
+        self.qubits = [ Qubit(name+str(i), defect) for i in range(size) ]
 
     def __getitem__(self, index):
         return self.qubits[index]
@@ -207,14 +234,31 @@ class Register:
 ###########################################################
 # Multi-Qubit Gates
 
-def CNOT(control, controlled):
-# TODO: CNOT should consists of rotations only
-    controlled_phase = controlled.measureX()
+def RXX_pi(a, b, pi_divider):
+    if a.measureX() == "+":
+        b.rotateX_pi(pi_divider)
+    else:
+        b.rotateX_pi(-pi_divider)
 
-    if(control.measureZ() > 0):
-        controlled.X()
-    if (controlled_phase == "-"):
-        control.Z()
+    if b.measureX() == "+":
+        a.rotateX_pi(pi_divider)
+    else:
+        a.rotateX_pi(-pi_divider)
+
+def CNOT(control, controlled):
+    control.rotateY_pi(2)
+    RXX_pi(control, controlled, 2)
+    control.rotateX_pi(-2)
+    controlled.rotateX_pi(-2)
+    control.rotateY_pi(-2)
+    
+
+
+    #if(control.measureZ() > 0):
+    #    controlled.X()
+    # Phase kickback
+    #controlled_phase = controlled.getPhi()
+    #control.rotateZ(controlled_phase)
 
 def CP_pi(control, controlled, pi_divider):
     control.P_pi(pi_divider*2)

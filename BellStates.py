@@ -5,6 +5,20 @@ from FastQubit import *
 
 reg = Register("reg", 2)
 
+print("Statistical initialization test")
+stat = [0,0,0,0]
+for test in range(10000):
+    phi = reg[0].getPhi()
+    if phi>0 and phi < pi/2:
+        stat[0] = stat[0] + 1
+    if phi>pi/2 and phi < pi:
+        stat[1] = stat[1] + 1
+    if phi>pi and phi < 3*pi/2:
+        stat[2] = stat[2] + 1
+    if phi>3*pi/2 and phi < 2*pi:
+        stat[3] = stat[3] + 1
+    reg.reset()
+print("States: {}, {}, {},{}", stat[0], stat[1], stat[2],stat[3])
 
 print("First Bell State")
 print("Z-measurement    X-measurement")
